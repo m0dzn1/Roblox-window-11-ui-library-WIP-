@@ -1,0 +1,297 @@
+--[[
+    ROBLOX CORE UI LIBRARY
+    Style: Imitates the official Roblox 'CoreGui' (Dark, Rounded, Translucent)
+]]
+
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+
+local Player = Players.LocalPlayer
+local Mouse = Player:GetMouse()
+
+-- // LIBRARY SETTINGS //
+local Library = {}
+local UI_THEME = {
+    Background = Color3.fromRGB(30, 30, 30),
+    DarkBackground = Color3.fromRGB(15, 15, 15),
+    Hover = Color3.fromRGB(60, 60, 60),
+    Text = Color3.fromRGB(255, 255, 255),
+    SubText = Color3.fromRGB(180, 180, 180),
+    Accent = Color3.fromRGB(255, 255, 255), -- Roblox uses white selection highlights
+    Transparency = 0.3 -- Glass effect level
+}
+
+-- // UTILITIES //
+local function Round(instance, radius)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, radius or 8)
+    corner.Parent = instance
+    return corner
+end
+
+local function MakeDraggable(topbarObject, object)
+    local dragging, dragInput, dragStart, startPos
+    
+    local function update(input)
+        local delta = input.Position - dragStart
+        object.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+    
+    topbarObject.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = object.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    topbarObject.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            update(input)
+        end
+    end)
+end
+
+-- // WINDOW FUNCTION //
+function Library:CreateWindow(Config)
+    local TitleText = Config.Title or "Roblox Core"
+    
+    -- Main ScreenGui
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "CoreUI_Lib"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.IgnoreGuiInset = true -- Stretches to top of screen like real CoreGui
+    
+    -- Attempt to parent to CoreGui (for executors), fallback to PlayerGui
+    pcall(function() ScreenGui.Parent = CoreGui end)
+    if not ScreenGui.Parent then ScreenGui.Parent = Player:WaitForChild("PlayerGui") end
+
+    -- Main Container (mimics the Esc menu background)
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0, 600, 0, 350)
+    MainFrame.Position = UDim2.new(0.5, -300, 0.5, -175)
+    MainFrame.BackgroundColor3 = UI_THEME.Background
+    MainFrame.BackgroundTransparency = UI_THEME.Transparency
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Parent = ScreenGui
+    Round(MainFrame, 12)
+
+    -- Blur Effect (Glass Look)
+    local Blur = Instance.new("BlurEffect", game:GetService("Lighting"))
+    Blur.Size = 20
+    Blur.Enabled = true
+
+    -- Top Bar
+    local TopBar = Instance.new("Frame")
+    TopBar.Name = "TopBar"
+    TopBar.Size = UDim2.new(1, 0, 0, 45)
+    TopBar.BackgroundTransparency = 1
+    TopBar.Parent = MainFrame
+    MakeDraggable(TopBar, MainFrame)
+    
+    local Title = Instance.new("TextLabel")
+    Title.Text = TitleText
+    Title.Size = UDim2.new(1, -50, 1, 0)
+    Title.Position = UDim2.new(0, 20, 0, 0)
+    Title.BackgroundTransparency = 1
+    Title.Font = Enum.Font.GothamBold
+    Title.TextColor3 = UI_THEME.Text
+    Title.TextSize = 24
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Parent = TopBar
+
+    -- Close Button (X)
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Text = "×" -- Standard X symbol
+    CloseBtn.Size = UDim2.new(0, 45, 0, 45)
+    CloseBtn.Position = UDim2.new(1, -45, 0, 0)
+    CloseBtn.BackgroundTransparency = 1
+    CloseBtn.TextColor3 = UI_THEME.Text
+    CloseBtn.TextSize = 30
+    CloseBtn.Font = Enum.Font.Gotham
+    CloseBtn.Parent = TopBar
+    
+    CloseBtn.MouseButton1Click:Connect(function()
+        ScreenGui:Destroy()
+        Blur:Destroy()
+    end)
+
+    -- Tab Container (Left Side or Top - We will use Top like the Settings Menu)
+    local TabContainer = Instance.new("ScrollingFrame")
+    TabContainer.Size = UDim2.new(1, -40, 0, 40)
+    TabContainer.Position = UDim2.new(0, 20, 0, 50)
+    TabContainer.BackgroundTransparency = 1
+    TabContainer.ScrollBarThickness = 0
+    TabContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+    TabContainer.AutomaticCanvasSize = Enum.AutomaticSize.X
+    TabContainer.Parent = MainFrame
+    
+    local TabLayout = Instance.new("UIListLayout")
+    TabLayout.FillDirection = Enum.FillDirection.Horizontal
+    TabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    TabLayout.Padding = UDim.new(0, 10)
+    TabLayout.Parent = TabContainer
+
+    -- Content Container
+    local ContentContainer = Instance.new("Frame")
+    ContentContainer.Size = UDim2.new(1, -40, 1, -100)
+    ContentContainer.Position = UDim2.new(0, 20, 0, 95)
+    ContentContainer.BackgroundTransparency = 1
+    ContentContainer.Parent = MainFrame
+
+    local Tabs = {}
+    local FirstTab = true
+
+    -- // TAB CREATION //
+    local TabHandler = {}
+    
+    function TabHandler:Tab(TabName)
+        -- 1. Create the Tab Button
+        local TabBtn = Instance.new("TextButton")
+        TabBtn.Text = TabName
+        TabBtn.Size = UDim2.new(0, 0, 1, 0) -- Width set automatically below
+        TabBtn.AutomaticSize = Enum.AutomaticSize.X
+        TabBtn.BackgroundColor3 = UI_THEME.DarkBackground
+        TabBtn.BackgroundTransparency = 0.5
+        TabBtn.TextColor3 = UI_THEME.SubText
+        TabBtn.Font = Enum.Font.GothamMedium
+        TabBtn.TextSize = 16
+        TabBtn.Parent = TabContainer
+        
+        -- Add padding to button so text isn't squished
+        local Padding = Instance.new("UIPadding")
+        Padding.PaddingLeft = UDim.new(0, 15)
+        Padding.PaddingRight = UDim.new(0, 15)
+        Padding.Parent = TabBtn
+        
+        Round(TabBtn, 20) -- Pill shape
+
+        -- 2. Create the Page (Scrollable Area)
+        local Page = Instance.new("ScrollingFrame")
+        Page.Name = TabName .. "_Page"
+        Page.Size = UDim2.new(1, 0, 1, 0)
+        Page.BackgroundTransparency = 1
+        Page.ScrollBarThickness = 4
+        Page.Visible = false
+        Page.Parent = ContentContainer
+        
+        local PageLayout = Instance.new("UIListLayout")
+        PageLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        PageLayout.Padding = UDim.new(0, 8)
+        PageLayout.Parent = Page
+        
+        -- Logic: Switching Tabs
+        TabBtn.MouseButton1Click:Connect(function()
+            -- Reset all tabs
+            for _, t in pairs(Tabs) do
+                t.Page.Visible = false
+                t.Btn.TextColor3 = UI_THEME.SubText
+                t.Btn.BackgroundTransparency = 0.5
+            end
+            -- Activate this tab
+            Page.Visible = true
+            TabBtn.TextColor3 = UI_THEME.Text
+            TabBtn.BackgroundTransparency = 0.2
+        end)
+
+        -- Auto-select first tab
+        if FirstTab then
+            Page.Visible = true
+            TabBtn.TextColor3 = UI_THEME.Text
+            TabBtn.BackgroundTransparency = 0.2
+            FirstTab = false
+        end
+
+        table.insert(Tabs, {Btn = TabBtn, Page = Page})
+
+        -- // ELEMENTS INSIDE TAB //
+        local Elements = {}
+        
+        function Elements:Button(Text, Callback)
+            local Btn = Instance.new("TextButton")
+            Btn.Size = UDim2.new(1, 0, 0, 40)
+            Btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            Btn.BackgroundTransparency = 0.9
+            Btn.Text = Text
+            Btn.TextColor3 = UI_THEME.Text
+            Btn.Font = Enum.Font.Gotham
+            Btn.TextSize = 14
+            Btn.Parent = Page
+            Round(Btn, 8)
+            
+            Btn.MouseButton1Click:Connect(function()
+                pcall(Callback)
+            end)
+            
+            -- Simple Hover Effect
+            Btn.MouseEnter:Connect(function() Btn.BackgroundTransparency = 0.8 end)
+            Btn.MouseLeave:Connect(function() Btn.BackgroundTransparency = 0.9 end)
+        end
+        
+        function Elements:Toggle(Text, Default, Callback)
+            local Toggled = Default or false
+            
+            local Frame = Instance.new("Frame")
+            Frame.Size = UDim2.new(1, 0, 0, 40)
+            Frame.BackgroundTransparency = 0.9
+            Frame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            Frame.Parent = Page
+            Round(Frame, 8)
+            
+            local Label = Instance.new("TextLabel")
+            Label.Text = Text
+            Label.Size = UDim2.new(1, -60, 1, 0)
+            Label.Position = UDim2.new(0, 15, 0, 0)
+            Label.BackgroundTransparency = 1
+            Label.TextColor3 = UI_THEME.Text
+            Label.Font = Enum.Font.Gotham
+            Label.TextSize = 14
+            Label.TextXAlignment = Enum.TextXAlignment.Left
+            Label.Parent = Frame
+            
+            local Switch = Instance.new("TextButton")
+            Switch.Text = ""
+            Switch.Size = UDim2.new(0, 40, 0, 20)
+            Switch.Position = UDim2.new(1, -50, 0.5, -10)
+            Switch.BackgroundColor3 = Toggled and Color3.fromRGB(0, 170, 255) or Color3.fromRGB(60, 60, 60)
+            Switch.Parent = Frame
+            Round(Switch, 20)
+            
+            local Dot = Instance.new("Frame")
+            Dot.Size = UDim2.new(0, 16, 0, 16)
+            Dot.Position = Toggled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+            Dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            Dot.Parent = Switch
+            Round(Dot, 20)
+            
+            Switch.MouseButton1Click:Connect(function()
+                Toggled = not Toggled
+                -- Animate (Instant for now)
+                Switch.BackgroundColor3 = Toggled and Color3.fromRGB(0, 170, 255) or Color3.fromRGB(60, 60, 60)
+                Dot.Position = Toggled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+                pcall(Callback, Toggled)
+            end)
+        end
+
+        return Elements
+    end
+    
+    return TabHandler
+end
+
+return Library
