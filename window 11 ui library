@@ -1,0 +1,192 @@
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+
+local Library = {}
+
+function Library:CreateWindow(config)
+    local Title = config.Title or "Settings"
+    local LP = Players.LocalPlayer
+    
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "Win11_Lib_" .. math.random(100, 999)
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.Parent = LP:WaitForChild("PlayerGui")
+
+    -- // MAIN WINDOW //
+    local Main = Instance.new("CanvasGroup")
+    Main.Size = UDim2.new(0, 800, 0, 520)
+    Main.Position = UDim2.new(0.5, -400, 0.5, -260)
+    Main.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    Main.GroupTransparency = 0.25 -- 0.75 Visibility
+    Main.BorderSizePixel = 0
+    Main.Parent = ScreenGui
+
+    Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 8)
+    local Stroke = Instance.new("UIStroke", Main)
+    Stroke.Color = Color3.fromRGB(255, 255, 255)
+    Stroke.Transparency = 0.85
+
+    -- // SIDEBAR //
+    local Sidebar = Instance.new("Frame")
+    Sidebar.Name = "Sidebar"
+    Sidebar.Size = UDim2.new(0, 240, 1, 0)
+    Sidebar.BackgroundTransparency = 1
+    Sidebar.Parent = Main
+
+    -- Profile Section (Matching your image)
+    local Profile = Instance.new("Frame", Sidebar)
+    Profile.Size = UDim2.new(1, 0, 0, 80)
+    Profile.BackgroundTransparency = 1
+
+    local Avatar = Instance.new("ImageLabel", Profile)
+    Avatar.Size = UDim2.new(0, 42, 0, 42)
+    Avatar.Position = UDim2.new(0, 20, 0.5, -21)
+    Avatar.Image = Players:GetUserThumbnailAsync(LP.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
+    Instance.new("UICorner", Avatar).CornerRadius = UDim.new(1, 0)
+
+    local DispName = Instance.new("TextLabel", Profile)
+    DispName.Text = LP.DisplayName
+    DispName.Position = UDim2.new(0, 72, 0.5, -12)
+    DispName.TextColor3 = Color3.fromRGB(255, 255, 255)
+    DispName.Font = Enum.Font.GothamMedium
+    DispName.TextSize = 13
+    DispName.BackgroundTransparency = 1
+    DispName.TextXAlignment = Enum.TextXAlignment.Left
+
+    local UserHandle = Instance.new("TextLabel", Profile)
+    UserHandle.Text = "@" .. LP.Name
+    UserHandle.Position = UDim2.new(0, 72, 0.5, 3)
+    UserHandle.TextColor3 = Color3.fromRGB(160, 160, 160)
+    UserHandle.Font = Enum.Font.Gotham
+    UserHandle.TextSize = 11
+    UserHandle.BackgroundTransparency = 1
+    UserHandle.TextXAlignment = Enum.TextXAlignment.Left
+
+    -- Tab Scrolling Frame
+    local TabScroll = Instance.new("ScrollingFrame", Sidebar)
+    TabScroll.Size = UDim2.new(1, 0, 1, -90)
+    TabScroll.Position = UDim2.new(0, 0, 0, 85)
+    TabScroll.BackgroundTransparency = 1
+    TabScroll.ScrollBarThickness = 0
+    local TabLayout = Instance.new("UIListLayout", TabScroll)
+    TabLayout.Padding = UDim.new(0, 2)
+    TabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+    -- // PAGES CONTAINER //
+    local Pages = Instance.new("Frame", Main)
+    Pages.Size = UDim2.new(1, -240, 1, 0)
+    Pages.Position = UDim2.new(0, 240, 0, 0)
+    Pages.BackgroundTransparency = 1
+
+    -- Draggable Logic
+    local dragStart, startPos
+    Main.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragStart = input.Position; startPos = Main.Position
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragStart and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
+            Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragStart = nil end
+    end)
+
+    local Window = {}
+
+    function Window:Tab(name)
+        local TabBtn = Instance.new("TextButton", TabScroll)
+        TabBtn.Size = UDim2.new(1, -20, 0, 36)
+        TabBtn.BackgroundTransparency = 1
+        TabBtn.Text = "        " .. name
+        TabBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+        TabBtn.Font = Enum.Font.Gotham
+        TabBtn.TextSize = 13
+        TabBtn.TextXAlignment = Enum.TextXAlignment.Left
+        Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 4)
+
+        local BlueLine = Instance.new("Frame", TabBtn)
+        BlueLine.Size = UDim2.new(0, 3, 0, 16)
+        BlueLine.Position = UDim2.new(0, 0, 0.5, -8)
+        BlueLine.BackgroundColor3 = Color3.fromRGB(0, 120, 212)
+        BlueLine.Visible = false
+        Instance.new("UICorner", BlueLine)
+
+        -- The Scrollable Page
+        local Page = Instance.new("ScrollingFrame", Pages)
+        Page.Size = UDim2.new(1, 0, 1, -20)
+        Page.Position = UDim2.new(0, 0, 0, 10)
+        Page.BackgroundTransparency = 1
+        Page.ScrollBarThickness = 2
+        Page.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80)
+        Page.Visible = false
+        
+        local PageLayout = Instance.new("UIListLayout", Page)
+        PageLayout.Padding = UDim.new(0, 6)
+        PageLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        
+        PageLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            Page.CanvasSize = UDim2.new(0, 0, 0, PageLayout.AbsoluteContentSize.Y + 20)
+        end)
+
+        TabBtn.MouseButton1Click:Connect(function()
+            for _, v in pairs(Pages:GetChildren()) do v.Visible = false end
+            for _, v in pairs(TabScroll:GetChildren()) do 
+                if v:IsA("TextButton") then v.BackgroundTransparency = 1 v.Frame.Visible = false end 
+            end
+            Page.Visible = true
+            TabBtn.BackgroundTransparency = 0.95
+            BlueLine.Visible = true
+        end)
+
+        local Tab = {}
+
+        -- Toggle Card
+        function Tab:Toggle(title, desc, callback)
+            local Card = Instance.new("Frame", Page)
+            Card.Size = UDim2.new(1, -40, 0, 64)
+            Card.BackgroundColor3 = Color3.fromRGB(40, 40, 43)
+            Card.BackgroundTransparency = 0.2
+            Instance.new("UICorner", Card).CornerRadius = UDim.new(0, 6)
+            Instance.new("UIStroke", Card).Color = Color3.fromRGB(255, 255, 255); Card.UIStroke.Transparency = 0.9
+
+            local T = Instance.new("TextLabel", Card)
+            T.Text = title; T.Position = UDim2.new(0, 15, 0, 15); T.TextColor3 = Color3.fromRGB(255, 255, 255)
+            T.Font = Enum.Font.GothamMedium; T.TextSize = 14; T.BackgroundTransparency = 1; T.TextXAlignment = Enum.TextXAlignment.Left
+
+            local D = Instance.new("TextLabel", Card)
+            D.Text = desc; D.Position = UDim2.new(0, 15, 0, 34); D.TextColor3 = Color3.fromRGB(170, 170, 170)
+            D.Font = Enum.Font.Gotham; D.TextSize = 12; D.BackgroundTransparency = 1; D.TextXAlignment = Enum.TextXAlignment.Left
+
+            local Switch = Instance.new("Frame", Card)
+            Switch.Size = UDim2.new(0, 40, 0, 20); Switch.Position = UDim2.new(1, -55, 0.5, -10)
+            Switch.BackgroundColor3 = Color3.fromRGB(100, 100, 100); Instance.new("UICorner", Switch).CornerRadius = UDim.new(1, 0)
+            
+            local Dot = Instance.new("Frame", Switch)
+            Dot.Size = UDim2.new(0, 14, 0, 14); Dot.Position = UDim2.new(0, 3, 0.5, -7)
+            Dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255); Instance.new("UICorner", Dot).CornerRadius = UDim.new(1, 0)
+
+            local Click = Instance.new("TextButton", Card); Click.Size = UDim2.new(1, 0, 1, 0); Click.BackgroundTransparency = 1; Click.Text = ""
+
+            local Toggled = false
+            Click.MouseButton1Click:Connect(function()
+                Toggled = not Toggled
+                local Color = Toggled and Color3.fromRGB(0, 120, 212) or Color3.fromRGB(100, 100, 100)
+                local Pos = Toggled and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7)
+                TweenService:Create(Switch, TweenInfo.new(0.2), {BackgroundColor3 = Color}):Play()
+                TweenService:Create(Dot, TweenInfo.new(0.2), {Position = Pos}):Play()
+                callback(Toggled)
+            end)
+        end
+
+        return Tab
+    end
+
+    return Window
+end
+
+return Library
